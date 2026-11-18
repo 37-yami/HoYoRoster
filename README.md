@@ -10,9 +10,12 @@
 
 ## 特性
 
-- **271 个角色**：原神 122（至 7.1）· 星穹铁道 89（至 4.6）· 绝区零 60（至 3.2）
+- **276 个角色**：原神 124（至 7.2）· 星穹铁道 90（至 4.7）· 绝区零 62（至 3.3）
 - **游戏切换**：HashRouter 路由（`#/genshin`、`#/hsr`、`#/zzz`），支持刷新/直链/前进后退
 - **四维筛选**：元素/属性 + 稀有度 + 分组（地区/命途/阵营）+ 次级标签（原神武器类型、绝区零特性）+ 搜索
+- **版本快照**：选择任意历史版本，只显示该版本及之前实装的角色（统计与进度同步回到该版本），
+  版本开启时间由各版本首位实装角色的日期自动推导，无需手工维护
+- **版本角标**：每张卡片左下角标注该角色实装版本号
 - **离线优先**：头像与字体全部内联，无任何外部资源请求
 - **单文件部署**：使用 `vite-plugin-singlefile` 将 JS/CSS/图片/字体全部内联进 `dist/index.html`
 - **本地持久化**：各游戏独立保存勾选状态（Zustand + `localStorage`，带数据迁移，角色表变更自动清理陈旧记录）
@@ -29,6 +32,7 @@
 | 特殊处理 | 旅行者单条；奇偶无固定元素 | 同名多形态合并单条（开拓者/三月七取初始形态） | 仅可玩代理人，不含主角与邦布 |
 
 数据来源为 BWIKI（wiki.biligame.com）SMW API，与各 wiki 图鉴口径对齐（实装日期一周内的角色不计入）。
+每个角色带 `rel`（实装日期）与 `ver`（实装版本）字段，驱动版本快照筛选。
 
 ## 技术栈
 
@@ -44,19 +48,20 @@ npm run build:single # 离线单文件版（全部资源内联）→ dist-single
 npm run preview      # 本地预览网页版构建产物
 npm run check        # TypeScript 类型检查
 npm run lint         # ESLint
+npm run test         # Vitest 单元测试（版本快照逻辑 + 数据不变式）
 ```
 
 ## 性能说明
 
-- **网页版（`dist/`，用于 GitHub Pages）**：HTML 仅约 1KB，JS gzip 后约 85KB，
-  271 张头像为独立 WebP 资源、配合 `loading="lazy"` 进入视口才加载——首屏秒开
-- **离线单文件版（`dist-single/index.html`，用于文件分享）**：约 5.5MB
+- **网页版（`dist/`，用于 GitHub Pages）**：HTML 仅约 1KB，JS gzip 后约 87KB，
+  276 张头像为独立 WebP 资源、配合 `loading="lazy"` 进入视口才加载——首屏秒开
+- **离线单文件版（`dist-single/index.html`，用于文件分享）**：约 5.8MB
   （头像已压缩为 208px Webp，较未压缩体积减少约 75%），双击即可在完全断网环境运行
 
 ## 离线使用
 
 构建完成后，直接双击 `dist-single/index.html` 即可在浏览器中打开，无需联网、无需服务器。
-所有 271 张角色头像与全部字体子集均已内联进该 HTML 文件。
+所有 276 张角色头像与全部字体子集均已内联进该 HTML 文件。
 
 ## 部署到 GitHub Pages
 
@@ -72,9 +77,10 @@ npm run lint         # ESLint
 ├── index.html              # 入口 HTML（favicon 内联为 SVG data URI）
 ├── vite.config.ts          # Vite 配置（singlefile + 去除 module 属性以支持 file://）
 ├── scripts/
-│   ├── fetch-roster.py        # 星铁/绝区零数据+头像拉取（BWIKI SMW API，可重复执行增量更新）
-│   ├── compress-portraits.py  # 头像压缩为 208px WebP（fetch 后必跑）
-│   └── subset-fonts.py        # 字体离线子集生成（改文案/加角色后重跑）
+│   ├── fetch-roster.py           # 星铁/绝区零数据+头像拉取（BWIKI SMW API，可重复执行增量更新）
+│   ├── fetch-genshin-versions.py # 原神角色实装日期/版本拉取合并（新增角色后重跑）
+│   ├── compress-portraits.py     # 头像压缩为 208px WebP（fetch 后必跑）
+│   └── subset-fonts.py           # 字体离线子集生成（改文案/加角色后重跑）
 ├── src/
 │   ├── main.tsx            # 入口（DOMContentLoaded 包裹，兼容 file:// 协议）
 │   ├── App.tsx             # HashRouter 路由 + 游戏 tab
@@ -95,8 +101,10 @@ npm run lint         # ESLint
 
 ## 数据维护
 
-- **原神**：手工维护 `src/data/genshin/characters.ts`，头像放入 `src/portraits/genshin/{id}.png`
-- **星铁/绝区零**：运行 `python scripts/fetch-roster.py` 自动更新数据与头像（含增量下载）
+- **原神**：手工维护 `src/data/genshin/characters.ts`，头像放入 `src/portraits/genshin/{id}.png`；
+  新增角色后运行 `python scripts/fetch-genshin-versions.py` 自动补全 rel/ver 字段
+- **星铁/绝区零**：运行 `python scripts/fetch-roster.py` 自动更新数据与头像（含增量下载）；
+  BWIKI 数据滞后时可在脚本内 `MANUAL_OVERRIDES` 补录
 - **拉取/新增头像后**：运行 `python scripts/compress-portraits.py` 将 PNG 压缩为 WebP
 - **任意游戏更新后**：运行 `python scripts/subset-fonts.py` 重新生成字体子集，
   否则新增文字在离线环境下会回退到系统字体

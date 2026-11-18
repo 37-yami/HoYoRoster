@@ -1,9 +1,12 @@
-import type { GameConfig, Rarity } from "../types";
+import { useMemo } from "react";
+import type { GameConfig, GameCharacter, Rarity } from "../types";
 import { RARITY_COLORS } from "../config/games";
 
 interface StatsBarProps {
   config: GameConfig;
   ownedIds: string[];
+  /** 版本快照内的角色（统计基数；"all" 时为全部） */
+  scopedCharacters: GameCharacter[];
   /** 当前筛选后展示的角色（用于显示"显示中"统计） */
   visibleCount: number;
   visibleOwnedCount: number;
@@ -19,27 +22,32 @@ const GRID_COLS: Record<number, string> = {
 export function StatsBar({
   config,
   ownedIds,
+  scopedCharacters,
   visibleCount,
   visibleOwnedCount,
 }: StatsBarProps) {
-  const total = config.characters.length;
+  const total = scopedCharacters.length;
   const ownedSet = new Set(ownedIds);
+  const scopedSet = useMemo(() => new Set(scopedCharacters.map((c) => c.id)), [scopedCharacters]);
 
-  // 持久化数据可能含陈旧 id，统计前按角色表过滤
-  const validOwned = ownedIds.filter((id) => config.characterMap[id]);
-  const owned = validOwned.length;
+  // 持久化数据可能含陈旧 id，统计前按角色表过滤；
+  // 快照模式下拥有数也只计快照内角色（否则会出现 owned > total）
+  const owned = useMemo(
+    () => ownedIds.filter((id) => config.characterMap[id] && scopedSet.has(id)).length,
+    [ownedIds, config, scopedSet],
+  );
   const percent = total > 0 ? Math.round((owned / total) * 100) : 0;
 
   // 按元素统计
   const elementStats = config.elements.map((e) => {
-    const chars = config.characters.filter((c) => c.element === e.key);
+    const chars = scopedCharacters.filter((c) => c.element === e.key);
     const ownedOfElement = chars.filter((c) => ownedSet.has(c.id)).length;
     return { ...e, totalOfElement: chars.length, ownedOfElement };
   });
 
   // 按稀有度统计
   const rarityStats = ([5, 4] as Rarity[]).map((r) => {
-    const chars = config.characters.filter((c) => c.rarity === r);
+    const chars = scopedCharacters.filter((c) => c.rarity === r);
     const ownedOfRarity = chars.filter((c) => ownedSet.has(c.id)).length;
     return {
       rarity: r,

@@ -8,6 +8,7 @@ interface FilterBarProps {
   filterRarity: Rarity | "all";
   filterGroup: string;
   filterTag: string;
+  filterVersion: string;
   searchKey: string;
   sortBy: SortBy;
   groupBy: boolean;
@@ -15,6 +16,7 @@ interface FilterBarProps {
   onRarity: (v: Rarity | "all") => void;
   onGroup: (v: string) => void;
   onTag: (v: string) => void;
+  onVersion: (v: string) => void;
   onSearch: (s: string) => void;
   onSort: (s: SortBy) => void;
   onToggleGroup: () => void;
@@ -34,6 +36,7 @@ export function FilterBar({
   filterRarity,
   filterGroup,
   filterTag,
+  filterVersion,
   searchKey,
   sortBy,
   groupBy,
@@ -41,6 +44,7 @@ export function FilterBar({
   onRarity,
   onGroup,
   onTag,
+  onVersion,
   onSearch,
   onSort,
   onToggleGroup,
@@ -126,6 +130,39 @@ export function FilterBar({
               ))}
             </SelectPill>
           )}
+
+          {/* 版本快照：选择某版本后仅显示该版本及之前实装的角色 */}
+          <div className="relative">
+            <select
+              value={filterVersion}
+              onChange={(e) => onVersion(e.target.value)}
+              aria-label="版本快照"
+              title="版本快照：只显示所选版本及之前实装的角色"
+              className={[
+                "cursor-pointer appearance-none rounded-full border py-1.5 pl-3 pr-7 text-xs outline-none transition-colors",
+                filterVersion !== "all"
+                  ? "border-gold/50 bg-gold/15 text-gold hover:bg-gold/20"
+                  : "border-white/10 bg-white/4 text-white/80 hover:bg-white/8 focus:border-gold/50",
+              ].join(" ")}
+            >
+              <option value="all" className="bg-ink-700">
+                最新 · 全部角色
+              </option>
+              {[...config.versions].reverse().map((v) => (
+                <option key={v.ver} value={v.ver} className="bg-ink-700">
+                  {v.ver} · {v.date.slice(0, 10)} 开启
+                </option>
+              ))}
+            </select>
+            <span
+              className={[
+                "pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px]",
+                filterVersion !== "all" ? "text-gold/70" : "text-white/40",
+              ].join(" ")}
+            >
+              ▼
+            </span>
+          </div>
 
           {/* 排序 */}
           <SelectPill value={sortBy} onChange={(v) => onSort(v as SortBy)} label="排序">

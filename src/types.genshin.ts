@@ -40,6 +40,10 @@ export interface Character {
     | "其他";
   /** 头像来源的历史参考（jmp.blue / enka / bwiki），运行时仅使用本地内联头像 */
   apiId: string | null;
+  /** 实装日期（ISO），由 fetch-genshin-versions.py 从 BWIKI 合并 */
+  rel: string;
+  /** 实装版本号，版本快照筛选用 */
+  ver: string;
 }
 
 export interface ElementMeta {

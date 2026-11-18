@@ -190,6 +190,21 @@ function CharacterCardBase({
           <ElementIcon game={config.key} element={character.element} size={13} />
         </div>
 
+        {/* 版本角标（左下）：该角色实装版本 */}
+        {character.ver && (
+          <span
+            className="absolute bottom-1 left-1 z-30 rounded-full px-1.5 py-px font-latin text-[9px] font-semibold tracking-wide backdrop-blur-sm transition-opacity duration-300"
+            style={{
+              color: "rgba(255,255,255,0.72)",
+              background: "rgba(10,8,20,0.55)",
+              opacity: isDim ? 0.5 : 0.95,
+            }}
+            title={`${character.ver} 版本实装（${character.rel}）`}
+          >
+            {character.ver}
+          </span>
+        )}
+
         {/* 已拥有勾选标记（右上） */}
         {isOwnedActive && (
           <span

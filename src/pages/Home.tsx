@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useTrackerStore } from "../store/useTrackerStore";
 import type { GameConfig, GameCharacter, SortBy } from "../types";
+import { filterBySnapshot } from "../utils/version";
 import { CharacterCard } from "../components/CharacterCard";
 import { StatsBar } from "../components/StatsBar";
 import { FilterBar } from "../components/FilterBar";
@@ -56,6 +57,7 @@ export default function Home({ config }: { config: GameConfig }) {
     filterRarity,
     filterGroup,
     filterTag,
+    filterVersion,
     searchKey,
     sortBy,
     groupBy,
@@ -63,9 +65,15 @@ export default function Home({ config }: { config: GameConfig }) {
 
   const ownedSet = useMemo(() => new Set(ownedIds), [ownedIds]);
 
+  // 版本快照内的角色（筛选与统计的共同基数；"all" 时即全部）
+  const scoped = useMemo(
+    () => filterBySnapshot(config.characters, filterVersion),
+    [config, filterVersion],
+  );
+
   // 筛选 + 排序后的可见角色（及其中已拥有数量）
   const { visible, visibleOwnedCount } = useMemo(() => {
-    const filtered = config.characters.filter((c) => {
+    const filtered = scoped.filter((c) => {
       if (filterElement !== "all" && c.element !== filterElement) return false;
       if (filterRarity !== "all" && c.rarity !== filterRarity) return false;
       if (filterGroup !== "all" && c.group !== filterGroup) return false;
@@ -86,7 +94,7 @@ export default function Home({ config }: { config: GameConfig }) {
         0,
       ),
     };
-  }, [config, filterElement, filterRarity, filterGroup, filterTag, searchKey, sortBy, ownedSet]);
+  }, [config, scoped, filterElement, filterRarity, filterGroup, filterTag, searchKey, sortBy, ownedSet]);
 
   // 仅在用户显式开启分组时按分组分节
   const grouped = useMemo(() => {
@@ -128,6 +136,7 @@ export default function Home({ config }: { config: GameConfig }) {
       <StatsBar
         config={config}
         ownedIds={ownedIds}
+        scopedCharacters={scoped}
         visibleCount={visible.length}
         visibleOwnedCount={visibleOwnedCount}
       />
@@ -140,6 +149,7 @@ export default function Home({ config }: { config: GameConfig }) {
           filterRarity={filterRarity}
           filterGroup={filterGroup}
           filterTag={filterTag}
+          filterVersion={filterVersion}
           searchKey={searchKey}
           sortBy={sortBy}
           groupBy={groupBy}
@@ -147,6 +157,7 @@ export default function Home({ config }: { config: GameConfig }) {
           onRarity={(v) => setFilter(config.key, { filterRarity: v })}
           onGroup={(v) => setFilter(config.key, { filterGroup: v })}
           onTag={(v) => setFilter(config.key, { filterTag: v })}
+          onVersion={(v) => setFilter(config.key, { filterVersion: v })}
           onSearch={(v) => setFilter(config.key, { searchKey: v })}
           onSort={(v) => setFilter(config.key, { sortBy: v })}
           onToggleGroup={() => setFilter(config.key, { groupBy: !groupBy })}

@@ -26,4 +26,6 @@ export const HSR_UNIFIED: GameCharacter[] = HSR_CHARACTERS.map((c) => ({
   rarity: c.rarity,
   group: c.group,
   tag: null,
+  rel: c.rel,
+  ver: c.ver,
 }));

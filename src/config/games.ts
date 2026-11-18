@@ -1,4 +1,5 @@
 import type { FilterMeta, GameCharacter, GameConfig, GameKey, Rarity } from "../types";
+import { deriveVersions } from "../utils/version";
 import {
   CHARACTERS as GENSHIN_RAW,
   portraitUrl as genshinPortrait,
@@ -39,6 +40,8 @@ const GENSHIN_CHARACTERS: GameCharacter[] = GENSHIN_RAW.map((c) => ({
   rarity: c.rarity,
   group: c.region,
   tag: c.weapon,
+  rel: c.rel,
+  ver: c.ver,
 }));
 
 /* ==================== 崩坏：星穹铁道 ==================== */
@@ -114,11 +117,11 @@ function buildZzzGroups(chars: GameCharacter[]): FilterMeta[] {
 /* ==================== 注册表 ==================== */
 
 function buildConfig(
-  base: Omit<GameConfig, "characterMap">,
+  base: Omit<GameConfig, "characterMap" | "versions">,
 ): GameConfig {
   const characterMap: Record<string, GameCharacter> = {};
   for (const c of base.characters) characterMap[c.id] = c;
-  return { ...base, characterMap };
+  return { ...base, characterMap, versions: deriveVersions(base.characters) };
 }
 
 export const GAME_REGISTRY: Record<GameKey, GameConfig> = {

@@ -26,4 +26,6 @@ export const ZZZ_UNIFIED: GameCharacter[] = ZZZ_CHARACTERS.map((c) => ({
   rarity: c.rarity,
   group: c.group,
   tag: c.tag,
+  rel: c.rel,
+  ver: c.ver,
 }));

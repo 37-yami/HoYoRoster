@@ -35,16 +35,28 @@ if hasattr(sys.stdout, "reconfigure"):
 GAMES = {
     "hsr": {
         "api": "https://wiki.biligame.com/sr/api.php",
-        "ask": "[[分类:角色]]|?名称|?稀有度|?命途|?元素属性|?实装日期|?实装版本|sort=实装日期|order=desc|limit=500",
+        # 注意：不带 sort=实装日期（SMW 排序会排除无日期行，导致 MANUAL_OVERRIDES 漏生效），排序在 Python 端做
+        "ask": "[[分类:角色]]|?名称|?稀有度|?命途|?元素属性|?实装日期|?实装版本|limit=500",
         "rarity": {"5星": 5, "4星": 4},
         # 常规角色为 {名}头像.png；•变体角色（姬子•启行等）无此文件，回退 {名}.png（160×160）
         "avatar_titles": lambda name: [f"文件:{name}头像.png", f"文件:{name}.png"],
     },
     "zzz": {
         "api": "https://wiki.biligame.com/zzz/api.php",
-        "ask": "[[分类:角色]]|?稀有度|?属性|?特性|?阵营|?实装日期|?实装版本|sort=实装日期|order=desc|limit=500",
+        # 同上：不带 sort=实装日期，无日期行（待 override 补录）也要返回
+        "ask": "[[分类:角色]]|?稀有度|?属性|?特性|?阵营|?实装日期|?实装版本|limit=500",
         "rarity": {"S": 5, "A": 4},
         "avatar_titles": lambda name: [f"文件:角色头像-{name}.png"],
+    },
+}
+
+# BWIKI 数据滞后时的手工修正：游戏 → 角色名 → 字段覆盖（实装日期补全 / 阵营归并等）。
+# BWIKI 补全对应字段后应移除条目。rel_date 覆盖同时决定“是否计入”（覆盖了日期即视为已实装）。
+MANUAL_OVERRIDES: dict[str, dict[str, dict]] = {
+    "zzz": {
+        # 赛维里安：3.3 下半 2026-11-11 已实装，BWIKI 实装日期暂缺；
+        # 阵营 BWIKI 标“都市秩序部”，与同部门的希希芙（治安局·都市秩序部）归并，避免分组分裂
+        "赛维里安": {"rel_date": date(2026, 11, 11), "group": "治安局·都市秩序部"},
     },
 }
 
@@ -81,16 +93,20 @@ def parse_date(s: str):
 
 def fetch_roster(game: str, spec: dict) -> list[dict]:
     data = get_json(api_url(spec["api"], action="ask", query=spec["ask"], format="json"))
+    overrides = MANUAL_OVERRIDES.get(game, {})
     rows = []
     for page, obj in data["query"]["results"].items():
         p = obj["printouts"]
         rel = p.get("实装日期", [])
         rel_date = parse_date(rel[0]) if rel else None
+        name = (p.get("名称") or [page])[0]
+        ov = overrides.get(name, {})
+        if "rel_date" in ov:
+            rel_date = ov["rel_date"]
         if rel_date is None:
             continue  # 未实装
         if rel_date > RELEASE_CUTOFF:
             continue  # 与 BWIKI 图鉴口径一致：一周内将实装的不计入
-        name = (p.get("名称") or [page])[0]
         rar_raw = (p.get("稀有度") or [""])[0]
         if rar_raw not in spec["rarity"]:
             raise ValueError(f"{game} {name}: 未知稀有度 {rar_raw!r}")
@@ -109,6 +125,8 @@ def fetch_roster(game: str, spec: dict) -> list[dict]:
             row["element"] = (p.get("属性") or [""])[0]
             row["group"] = (p.get("阵营") or [""])[0]
             row["tag"] = (p.get("特性") or [""])[0]
+        if "group" in ov:
+            row["group"] = ov["group"]  # 手工修正（如阵营归并）
         for k in ("element", "group"):
             if not row[k]:
                 raise ValueError(f"{game} {name}: 缺少 {k}")
@@ -173,10 +191,10 @@ def emit_ts(game: str, rows: list[dict]):
             " * 崩坏：星穹铁道角色数据（由 scripts/fetch-roster.py 生成，请勿手工编辑）\n"
             " *\n"
             " * 字段：id/name（同名多形态已合并，如开拓者/三月七取初始形态）、element（属性）、\n"
-            " * rarity（5/4）、group（命途）、rel（实装日期，排序用）\n"
+            " * rarity（5/4）、group（命途）、rel（实装日期）、ver（实装版本，版本快照筛选用）\n"
             " */\n"
             "export interface HsrCharacter {\n"
-            "  id: string;\n  name: string;\n  element: string;\n  rarity: 4 | 5;\n  group: string;\n  rel: string;\n}\n\n"
+            "  id: string;\n  name: string;\n  element: string;\n  rarity: 4 | 5;\n  group: string;\n  rel: string;\n  ver: string;\n}\n\n"
             "export const HSR_CHARACTERS: HsrCharacter[] = [\n"
         ),
         "zzz": (
@@ -184,10 +202,10 @@ def emit_ts(game: str, rows: list[dict]):
             " * 绝区零代理人数据（由 scripts/fetch-roster.py 生成，请勿手工编辑）\n"
             " *\n"
             " * 字段：id/name、element（属性）、rarity（内部 5=S级 / 4=A级，显示层映射）、\n"
-            " * group（阵营）、tag（特性）、rel（实装日期，排序用）\n"
+            " * group（阵营）、tag（特性）、rel（实装日期）、ver（实装版本，版本快照筛选用）\n"
             " */\n"
             "export interface ZzzCharacter {\n"
-            "  id: string;\n  name: string;\n  element: string;\n  rarity: 4 | 5;\n  group: string;\n  tag: string;\n  rel: string;\n}\n\n"
+            "  id: string;\n  name: string;\n  element: string;\n  rarity: 4 | 5;\n  group: string;\n  tag: string;\n  rel: string;\n  ver: string;\n}\n\n"
             "export const ZZZ_CHARACTERS: ZzzCharacter[] = [\n"
         ),
     }[game]
@@ -196,7 +214,8 @@ def emit_ts(game: str, rows: list[dict]):
         tag_field = f', tag: "{r["tag"]}"' if game == "zzz" else ""
         lines.append(
             f'  {{ id: "{r["name"]}", name: "{r["name"]}", element: "{r["element"]}", '
-            f'rarity: {r["rarity"]}, group: "{r["group"]}"{tag_field}, rel: "{r["rel_date"].isoformat()}" }},'
+            f'rarity: {r["rarity"]}, group: "{r["group"]}"{tag_field}, rel: "{r["rel_date"].isoformat()}", '
+            f'ver: "{r["version"]}" }},'
         )
     body = "\n".join(lines) + "\n];\n"
     out = ROOT / "src" / "data" / game / "characters.ts"
@@ -208,6 +227,12 @@ def main():
     for game, spec in GAMES.items():
         print(f"== {game} ==")
         rows = fetch_roster(game, spec)
+        empty_ver = [r["name"] for r in rows if not r["version"]]
+        if empty_ver:
+            print(
+                f"  [警告] {len(empty_ver)} 名角色缺少实装版本：{empty_ver}",
+                file=sys.stderr,
+            )
         n5 = sum(1 for r in rows if r["rarity"] == 5)
         n4 = len(rows) - n5
         print(f"角色 {len(rows)} 名（5★ {n5} / 4★ {n4}），最新：{rows[-1]['name']}（{rows[-1]['version']}）")

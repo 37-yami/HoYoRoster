@@ -8,6 +8,7 @@
     "build": "vite build",
     "build:single": "vite build --mode single",
     "lint": "eslint .",
+    "test": "vitest run",
     "preview": "vite preview",
     "check": "tsc -b --noEmit"
   },
@@ -38,6 +39,7 @@
     "typescript-eslint": "^8.30.1",
     "vite": "^6.3.5",
     "vite-plugin-singlefile": "^2.3.3",
-    "vite-tsconfig-paths": "^5.1.4"
+    "vite-tsconfig-paths": "^5.1.4",
+    "vitest": "^5.1.1"
   }
 }

@@ -1,5 +1,8 @@
+import type { VersionInfo } from "./utils/version";
+
 /** 稀有度：内部统一用 5/4，各游戏显示标签不同（5★/4★、S级/A级） */
 export type Rarity = 4 | 5;
+export type { VersionInfo } from "./utils/version";
 
 /** 排序维度（group 对应各游戏的地区/命途/阵营） */
 export type SortBy = "rarity" | "element" | "group" | "name";
@@ -17,6 +20,10 @@ export interface GameCharacter {
   group: string;
   /** 次级标签 key：原神=武器类型、绝区零=特性、星铁=null（命途即分组） */
   tag: string | null;
+  /** 实装日期（ISO），用于推导版本开启日 */
+  rel: string;
+  /** 实装版本号（如 "7.2"），版本快照筛选用 */
+  ver: string;
 }
 
 /** 筛选/展示用的元数据（元素、分组、标签通用） */
@@ -56,6 +63,11 @@ export interface GameConfig {
   rarityLabel: Record<Rarity, string>;
   characters: GameCharacter[];
   characterMap: Record<string, GameCharacter>;
+  /**
+   * 版本时间线（升序），由角色数据推导（每版本最早实装日 = 版本开启日）。
+   * 驱动「版本快照」筛选：选择某版本后仅显示该版本及之前实装的角色。
+   */
+  versions: VersionInfo[];
   /** 本地内联头像（id → data URI；空串表示无图回退元素符号） */
   portrait: (id: string) => string;
 }

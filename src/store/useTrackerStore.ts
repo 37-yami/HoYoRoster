@@ -19,6 +19,8 @@ interface GameSlot {
   filterGroup: string;
   /** 筛选：次级标签（武器/特性），星铁无 */
   filterTag: string;
+  /** 版本快照：所选版本（仅显示该版本及之前实装的角色），"all" 为最新 */
+  filterVersion: string;
   /** 筛选：搜索关键字 */
   searchKey: string;
   /** 排序方式 */
@@ -35,6 +37,7 @@ function initialSlot(): GameSlot {
     filterRarity: "all",
     filterGroup: "all",
     filterTag: "all",
+    filterVersion: "all",
     searchKey: "",
     sortBy: "group",
     groupBy: false,
@@ -52,7 +55,7 @@ interface TrackerState {
 
   getSlot: (game: GameKey) => GameSlot;
   toggleOwned: (game: GameKey, id: string) => void;
-  setFilter: (game: GameKey, patch: Partial<Pick<GameSlot, "filterElement" | "filterRarity" | "filterGroup" | "filterTag" | "searchKey" | "sortBy" | "groupBy">>) => void;
+  setFilter: (game: GameKey, patch: Partial<Pick<GameSlot, "filterElement" | "filterRarity" | "filterGroup" | "filterTag" | "filterVersion" | "searchKey" | "sortBy" | "groupBy">>) => void;
   /** 将 ids 并入已拥有集合（保留现有选择，不替换） */
   selectAll: (game: GameKey, ids: string[]) => void;
   clearAll: (game: GameKey) => void;
